@@ -47,7 +47,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 
 | Qat | Texnologiya |
 |---|---|
-| AI | Anthropic Claude API (`claude-sonnet-4-6`), function calling, vision |
+| AI | Anthropic Claude API (`claude-haiku-4-5`), function calling, vision |
 | Backend | FastAPI, Pydantic v2, async/await, StreamingResponse (SSE) |
 | Database | PostgreSQL / SQLite, SQLAlchemy ORM |
 | Cache | Redis (qanun maddələri üçün in-memory cache) |
@@ -171,7 +171,7 @@ API sənədləşməsi: `http://localhost:8000/docs` (Swagger UI)
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | **Tələb olunur**. Claude API açarı |
 | `DATABASE_URL` | `sqlite:///./contract_analyzer.db` | DB URL |
-| `CLAUDE_MODEL` | `claude-sonnet-4-6` | İstifadə olunan model |
+| `CLAUDE_MODEL` | `claude-haiku-4-5` | İstifadə olunan model |
 | `CLAUDE_MAX_TOKENS` | `8192` | Maks output token |
 | `CLAUDE_MAX_FUNC_CALLS` | `6` | Function call loop limiti |
 | `MAX_IMAGES` | `6` | Maks şəkil sayı |
@@ -210,7 +210,7 @@ Claude analiz zamanı 5 funksiya çağıra bilər:
 
 | Funksiya | Təyinat |
 |---|---|
-| `get_law_article` | AZ qanun maddəsi tap |
+| `get_law_article`  | AZ qanun maddəsi tap |
 | `get_gdpr_article` | GDPR maddəsi tap |
 | `check_compliance` | Müqavilə uyğunluğunu yoxla |
 | `get_penalty_info` | Sanksiya məlumatı |
