@@ -1,0 +1,30 @@
+# Mühit dəyişənləri - heç vaxt GitHub-a yüklənməsin
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# DB
+*.sqlite
+*.db
+
+# Yüklənən fayllar
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+#others
+qaralama.txt
+z-index.html
+Numune senedler
+archive files
+results
+
+
+

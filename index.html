@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contract Analyzer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg:        #0d0d0c;
+    --surface:   #161614;
+    --border:    #2a2a26;
+    --text:      #f5f0e6;
+    --text-dim:  #888377;
+    --accent:    #d4a373;
+    --high:      #e85d4a;
+    --med:       #e8b04a;
+    --low:       #6ab76a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 400;
+    line-height: 1.6;
+    min-height: 100vh;
+    background-image:
+        radial-gradient(ellipse at top, rgba(212, 163, 115, 0.05), transparent 60%);
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px;
+}
+
+/* ----- Header ----- */
+
+header { margin-bottom: 60px; }
+
+.eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+h1 {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+}
+
+h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+}
+
+.tagline {
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 520px;
+}
+
+/* ----- Tabs ----- */
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+}
+
+.tab {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    padding: 14px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* ----- Panel ----- */
+
+.panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+}
+
+.panel.active { display: block; }
+
+.panel h2 {
+    font-size: 24px;
+    font-weight: 400;
+    margin-bottom: 8px;
+}
+
+.panel .desc {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+/* ----- Form ----- */
+
+label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+}
+
+select, textarea, input[type="file"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+}
+
+select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+textarea { min-height: 200px; resize: vertical; line-height: 1.5; }
+
+input[type="file"] {
+    padding: 20px 14px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+}
+
+button.submit {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+button.submit:hover { opacity: 0.85; }
+
+button.submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ----- Results ----- */
+
+.results { margin-top: 24px; }
+
+.results.empty { display: none; }
+
+.results-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.results-title {
+    font-size: 20px;
+    font-weight: 400;
+}
+
+.risk-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.risk-HIGH   { background: rgba(232, 93, 74, 0.15);  color: var(--high); }
+.risk-MEDIUM { background: rgba(232, 176, 74, 0.15); color: var(--med); }
+.risk-LOW    { background: rgba(106, 183, 106, 0.15); color: var(--low); }
+
+.score-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 20px;
+    background: var(--bg);
+    border-radius: 8px;
+}
+
+.score-num {
+    font-size: 48px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--accent);
+}
+
+.score-num small {
+    font-size: 18px;
+    color: var(--text-dim);
+}
+
+.score-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.score-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.6s;
+}
+
+.section {
+    margin-bottom: 28px;
+}
+
+.section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
+
+.section ul {
+    list-style: none;
+}
+
+.section li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.section li:last-child { border-bottom: none; }
+
+.clause {
+    padding: 16px;
+    background: var(--bg);
+    border-left: 3px solid var(--med);
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.clause.HIGH   { border-left-color: var(--high); }
+.clause.MEDIUM { border-left-color: var(--med); }
+.clause.LOW    { border-left-color: var(--low); }
+
+.clause-text {
+    font-style: italic;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.clause-explanation {
+    font-size: 15px;
+}
+
+.summary-box {
+    padding: 24px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    line-height: 1.7;
+}
+
+.recommendation {
+    padding: 16px 20px;
+    background: rgba(212, 163, 115, 0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+}
+
+.compliance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+    .compliance-grid { grid-template-columns: 1fr; }
+}
+
+.compliance-card {
+    padding: 16px;
+    background: var(--bg);
+    border-radius: 8px;
+}
+
+.compliance-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+}
+
+.compliance-status {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--accent);
+}
+
+.violations-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.violation-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.violation-item:last-child {
+    border-bottom: none;
+}
+
+.law-ref {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(212, 163, 115, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+}
+
+.violation-desc {
+    color: var(--text);
+    line-height: 1.5;
+    font-family: 'Fraunces', serif;
+}
+
+/* ----- Streaming ----- */
+
+.stream-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    min-height: 100px;
+    margin-bottom: 24px;
+}
+
+.stream-line {
+    padding: 6px 0;
+    color: var(--text-dim);
+    opacity: 0;
+    animation: fadeIn 0.4s forwards;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stream-line::before {
+    content: '▸';
+    color: var(--accent);
+}
+
+.stream-line.done::before { content: '✓'; color: var(--low); }
+.stream-line.done { color: var(--low); }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ----- Typing indicator (non-streaming endpoints) ----- */
+
+.typing-box {
+    margin-top: 24px;
+    padding: 24px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: none;
+}
+
+.typing-box.active {
+    display: block;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.typing-message {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    min-height: 24px;
+    transition: opacity 0.3s;
+}
+
+.typing-message::before {
+    content: '▸';
+    color: var(--accent);
+}
+
+.typing-dots {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 4px;
+}
+
+.typing-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: typing-bounce 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing-bounce {
+    0%, 80%, 100% {
+        transform: scale(0.6);
+        opacity: 0.3;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.typing-progress {
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+}
+
+.typing-progress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background: var(--accent);
+    border-radius: 1px;
+    animation: progress-slide 2s infinite ease-in-out;
+}
+
+@keyframes progress-slide {
+    0%   { left: -30%; }
+    100% { left: 100%; }
+}
+
+.error {
+    background: rgba(232, 93, 74, 0.1);
+    border: 1px solid var(--high);
+    color: var(--high);
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+}
+
+/* ----- Footer ----- */
+
+footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+footer .api-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+}
+.status-dot.ok { background: var(--low); }
+.status-dot.error { background: var(--high); }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+    <div class="eyebrow">AZ.AI / Document Intelligence</div>
+    <h1>Contract <em>Analyzer</em></h1>
+    <p class="tagline">Hüquqi sənədlər, müqavilələr, istifadə şərtləri və məxfilik siyasəti üçün Claude AI əsaslı analiz sistemi.</p>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+    <button class="tab active" data-tab="file">📄 Fayl</button>
+    <button class="tab" data-tab="text">📋 Mətn</button>
+    <button class="tab" data-tab="images">📷 Şəkil</button>
+    <button class="tab" data-tab="terms">🔒 Şərtlər və Məxfilik (Live)</button>
+</div>
+
+<!-- PANEL: FILE -->
+<div class="panel active" id="panel-file">
+    <h2>Fayl yüklə</h2>
+    <p class="desc">PDF, DOCX və ya TXT — müqavilə və ya hüquqi sənəd.</p>
+
+    <label>Sənəd növü</label>
+    <select id="file-doctype">
+        <option value="contract">Müqavilə</option>
+        <option value="other">Digər</option>
+    </select>
+
+    <label>Fayl seç</label>
+    <input type="file" id="file-input" accept=".pdf,.docx,.txt">
+
+    <button class="submit" onclick="uploadFile()">Analiz et</button>
+
+    <div class="typing-box" id="typing-file">
+        <div class="typing-message" id="typing-file-msg">
+            Sənəd oxunur<span class="typing-dots"><span></span><span></span><span></span></span>
+        </div>
+        <div class="typing-progress"></div>
+    </div>
+</div>
+
+<!-- PANEL: TEXT -->
+<div class="panel" id="panel-text">
+    <h2>Mətni copy-paste ilə yüklə</h2>
+    <p class="desc">Müqavilə mətnini birbaşa yapışdır.</p>
+
+    <label>Sənəd növü</label>
+    <select id="text-doctype">
+        <option value="contract">Müqavilə</option>
+        <option value="other">Digər</option>
+    </select>
+
+    <label>Mətn (min 50 simvol)</label>
+    <textarea id="text-input" placeholder="Müqavilə mətnini buraya yapışdırın..."></textarea>
+
+    <button class="submit" onclick="uploadText()">Analiz et</button>
+
+    <div class="typing-box" id="typing-text">
+        <div class="typing-message" id="typing-text-msg">
+            Sənəd oxunur<span class="typing-dots"><span></span><span></span><span></span></span>
+        </div>
+        <div class="typing-progress"></div>
+    </div>
+</div>
+
+<!-- PANEL: IMAGES -->
+<div class="panel" id="panel-images">
+    <h2>Müqavilə şəkilləri</h2>
+    <p class="desc">Fiziki imzalanmış müqavilə — maksimum 6 səhifə (JPG, PNG, WEBP).</p>
+
+    <label>Sənəd növü</label>
+    <select id="images-doctype">
+        <option value="contract">Müqavilə</option>
+        <option value="other">Digər</option>
+    </select>
+
+    <label>Şəkillər (1-6 ədəd)</label>
+    <input type="file" id="images-input" accept="image/jpeg,image/png,image/webp" multiple>
+
+    <button class="submit" onclick="uploadImages()">Analiz et</button>
+
+    <div class="typing-box" id="typing-images">
+        <div class="typing-message" id="typing-images-msg">
+            Şəkillər oxunur<span class="typing-dots"><span></span><span></span><span></span></span>
+        </div>
+        <div class="typing-progress"></div>
+    </div>
+</div>
+
+<!-- PANEL: TERMS (Streaming) -->
+<div class="panel" id="panel-terms">
+    <h2>İstifadə şərtləri və məxfilik siyasəti</h2>
+    <p class="desc">Terms of Service və Privacy Policy üçün vahid analiz — real vaxtda axın.</p>
+
+    <label>Mətn (və ya fayl seç)</label>
+    <textarea id="terms-input" placeholder="Şərtlər və ya məxfilik siyasəti mətnini yapışdırın..."></textarea>
+
+    <label>Və ya fayl yüklə (fakultativ)</label>
+    <input type="file" id="terms-file" accept=".pdf,.docx,.txt">
+
+    <button class="submit" onclick="uploadTerms()">Analizə başla</button>
+
+    <div class="stream-box" id="stream-output" style="display:none; margin-top: 24px;"></div>
+</div>
+
+<!-- RESULTS -->
+<div class="results empty" id="results">
+    <div class="results-header">
+        <div class="results-title">Analiz nəticəsi</div>
+        <div class="risk-badge" id="result-risk-badge">—</div>
+    </div>
+
+    <div class="score-row">
+        <div class="score-num"><span id="result-score">0</span><small>/10</small></div>
+        <div class="score-bar"><div class="score-bar-fill" id="result-score-bar"></div></div>
+    </div>
+
+    <div class="section" id="section-summary" style="display:none;">
+        <div class="section-title">Sadə dildə xülasə</div>
+        <div class="summary-box" id="result-summary"></div>
+        <div class="recommendation" id="result-recommendation"></div>
+    </div>
+
+    <div class="section" id="section-compliance" style="display:none;">
+        <div class="section-title">Qanunlara uyğunluq</div>
+        <div class="compliance-grid" id="result-compliance"></div>
+    </div>
+
+    <div class="section" id="section-clauses" style="display:none;">
+        <div class="section-title">Riskli maddələr</div>
+        <div id="result-clauses"></div>
+    </div>
+
+    <div class="section" id="section-data" style="display:none;">
+        <div class="section-title">Toplanan məlumatlar</div>
+        <ul id="result-data"></ul>
+    </div>
+
+    <div class="section" id="section-third" style="display:none;">
+        <div class="section-title">3-cü tərəflərlə paylaşım</div>
+        <div id="result-third"></div>
+    </div>
+
+    <div class="section" id="section-rights" style="display:none;">
+        <div class="section-title">İstifadəçi hüquqları</div>
+        <ul id="result-rights"></ul>
+    </div>
+
+    <div class="section" id="section-obligations" style="display:none;">
+        <div class="section-title">Öhdəliklər</div>
+        <ul id="result-obligations"></ul>
+    </div>
+
+    <div class="section" id="section-dates" style="display:none;">
+        <div class="section-title">Mühüm tarixlər</div>
+        <ul id="result-dates"></ul>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Sistem</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim);">
+            <div>Token sərfi: <span id="result-tokens">0</span></div>
+            <div>Function calls: <span id="result-funccalls">0</span></div>
+        </div>
+    </div>
+</div>
+
+<div id="error-box"></div>
+
+<footer>
+    <span class="api-status">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">API yoxlanır...</span>
+    </span>
+    &nbsp;·&nbsp; localhost:8000
+</footer>
+
+</div>
+
+<script>
+// =====================================================
+// API URL
+// =====================================================
+const API = "http://127.0.0.1:8000";
+
+
+// =====================================================
+// TAB SWITCHING
+// =====================================================
+document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+        const target = tab.dataset.tab;
+
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+
+        tab.classList.add("active");
+        document.getElementById("panel-" + target).classList.add("active");
+    });
+});
+
+
+// =====================================================
+// HEALTH CHECK
+// =====================================================
+fetch(API + "/health")
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("status-dot").classList.add("ok");
+        document.getElementById("status-text").textContent =
+            "API qoşuludur (" + data.database + ")";
+    })
+    .catch(() => {
+        document.getElementById("status-dot").classList.add("error");
+        document.getElementById("status-text").textContent =
+            "API qoşulmayıb — uvicorn işlədilməyib?";
+    });
+
+
+// =====================================================
+// HELPERS
+// =====================================================
+function showError(msg) {
+    document.getElementById("error-box").innerHTML =
+        '<div class="error">⚠ ' + msg + "</div>";
+    setTimeout(() => {
+        document.getElementById("error-box").innerHTML = "";
+    }, 6000);
+}
+
+function setLoading(btnText, isLoading) {
+    document.querySelectorAll("button.submit").forEach(b => {
+        b.disabled = isLoading;
+    });
+}
+
+function clearResults() {
+    const r = document.getElementById("results");
+    r.classList.add("empty");
+    document.getElementById("error-box").innerHTML = "";
+
+    // Bütün dinamik section-ları sıfırla
+    const sectionIds = [
+        "section-summary", "section-compliance", "section-clauses",
+        "section-data", "section-third", "section-rights",
+        "section-obligations", "section-dates"
+    ];
+    sectionIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+    });
+
+    // Daxili konteynerləri də təmizlə
+    const containerIds = [
+        "result-compliance", "result-clauses", "result-third",
+        "result-data", "result-rights", "result-obligations", "result-dates"
+    ];
+    containerIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = "";
+    });
+
+    // Sadə text field-lər
+    const textIds = [
+        "result-summary", "result-recommendation",
+        "result-risk-badge"
+    ];
+    textIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "";
+    });
+
+    // Skor sıfırla
+    const score = document.getElementById("result-score");
+    if (score) score.textContent = "0";
+    const bar = document.getElementById("result-score-bar");
+    if (bar) bar.style.width = "0%";
+
+    // Token statistikası
+    const tokens = document.getElementById("result-tokens");
+    if (tokens) tokens.textContent = "0";
+    const funccalls = document.getElementById("result-funccalls");
+    if (funccalls) funccalls.textContent = "0";
+
+    // Streaming box-u da gizlət
+    const streamBox = document.getElementById("stream-output");
+    if (streamBox) {
+        streamBox.style.display = "none";
+        streamBox.innerHTML = "";
+    }
+}
+
+
+// =====================================================
+// TYPING INDICATOR (non-streaming endpoints)
+// =====================================================
+const TYPING_MESSAGES = [
+    "Sənəd oxunur",
+    "Maddələr analiz edilir",
+    "Azərbaycan qanunvericiliyi yoxlanılır",
+    "GDPR uyğunluğu yoxlanılır",
+    "Kibertəhlükəsizlik rəyi alınır",
+    "Risk qiymətləndirilir",
+    "Nəticə hazırlanır"
+];
+
+let typingInterval = null;
+
+function startTyping(boxId, msgId) {
+    const box = document.getElementById(boxId);
+    const msg = document.getElementById(msgId);
+
+    box.classList.add("active");
+
+    let i = 0;
+    const updateMessage = () => {
+        const text = TYPING_MESSAGES[i % TYPING_MESSAGES.length];
+        msg.style.opacity = "0";
+        setTimeout(() => {
+            msg.innerHTML = text +
+                '<span class="typing-dots"><span></span><span></span><span></span></span>';
+            msg.style.opacity = "1";
+        }, 200);
+        i++;
+    };
+
+    updateMessage();
+    typingInterval = setInterval(updateMessage, 3000);
+}
+
+function stopTyping(boxId) {
+    if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = null;
+    }
+    const box = document.getElementById(boxId);
+    if (box) box.classList.remove("active");
+}
+
+
+// =====================================================
+// RENDER RESULTS
+// =====================================================
+function renderResults(analysis) {
+    const r = document.getElementById("results");
+    r.classList.remove("empty");
+
+    // Risk badge & score
+    const badge = document.getElementById("result-risk-badge");
+    badge.textContent = analysis.risk_level;
+    badge.className = "risk-badge risk-" + analysis.risk_level;
+
+    document.getElementById("result-score").textContent =
+        analysis.risk_score.toFixed(1);
+    document.getElementById("result-score-bar").style.width =
+        (analysis.risk_score * 10) + "%";
+
+    // Summary
+    if (analysis.simple_summary) {
+        document.getElementById("section-summary").style.display = "block";
+        document.getElementById("result-summary").textContent = analysis.simple_summary;
+        document.getElementById("result-recommendation").textContent =
+            "→ " + analysis.recommendation;
+    }
+
+    // Compliance
+    const complianceItems = [];
+    if (analysis.az_law)    complianceItems.push(["AZ Qanunu", analysis.az_law, "az"]);
+    if (analysis.gdpr)      complianceItems.push(["GDPR", analysis.gdpr, "eu"]);
+    if (analysis.cyber_sec) complianceItems.push(["Kibertəhlükəsizlik", analysis.cyber_sec, "cs"]);
+
+    if (complianceItems.length > 0) {
+        document.getElementById("section-compliance").style.display = "block";
+        const grid = document.getElementById("result-compliance");
+        grid.innerHTML = "";
+
+        complianceItems.forEach(([name, c, type]) => {
+            // Structured violations
+            const violations = (c.violations || []).map(v => {
+                // Yeni format: {law_name, article_num, description}
+                if (typeof v === "object" && v.law_name) {
+                    const articleRef = v.article_num
+                        ? `<span class="law-ref">${escapeHtml(v.law_name)} — Maddə ${escapeHtml(v.article_num)}</span>`
+                        : `<span class="law-ref">${escapeHtml(v.law_name)}</span>`;
+                    return `
+                        <li class="violation-item">
+                            ${articleRef}
+                            <div class="violation-desc">${escapeHtml(v.description)}</div>
+                        </li>
+                    `;
+                }
+                // Köhnə format: sadə string
+                return "<li>" + escapeHtml(typeof v === "string" ? v : JSON.stringify(v)) + "</li>";
+            }).join("");
+
+            grid.innerHTML += `
+                <div class="compliance-card">
+                    <div class="compliance-name">${name}</div>
+                    <div class="compliance-status">${escapeHtml(c.status)}</div>
+                    ${violations ? "<ul class='violations-list'>" + violations + "</ul>" : ""}
+                </div>
+            `;
+        });
+    }
+
+    // Risk clauses
+    if (analysis.risk_clauses && analysis.risk_clauses.length > 0) {
+        document.getElementById("section-clauses").style.display = "block";
+        const html = analysis.risk_clauses.map(c => `
+            <div class="clause ${c.risk_level}">
+                <div class="clause-text">"${escapeHtml(c.clause)}"</div>
+                <div class="clause-explanation">${escapeHtml(c.explanation)}</div>
+            </div>
+        `).join("");
+        document.getElementById("result-clauses").innerHTML = html;
+    }
+
+    // Lists
+    fillList("section-data", "result-data", analysis.data_collected);
+    fillList("section-rights", "result-rights", analysis.user_rights);
+    fillList("section-obligations", "result-obligations", analysis.obligations);
+    fillList("section-dates", "result-dates", analysis.important_dates);
+
+    // Third party
+    if (analysis.third_party && analysis.third_party.length > 0) {
+        document.getElementById("section-third").style.display = "block";
+        const html = analysis.third_party.map(tp => `
+            <div class="clause">
+                <div style="font-weight: 600; margin-bottom: 4px;">${escapeHtml(tp.partner)}</div>
+                <div class="clause-text">${escapeHtml(tp.what)}</div>
+                <div style="font-size: 13px; color: var(--text-dim);">→ ${escapeHtml(tp.purpose)}</div>
+            </div>
+        `).join("");
+        document.getElementById("result-third").innerHTML = html;
+    }
+
+    document.getElementById("result-tokens").textContent = analysis.tokens_used;
+    document.getElementById("result-funccalls").textContent = analysis.function_calls;
+
+    // Scroll into view
+    r.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function fillList(sectionId, listId, items) {
+    if (items && items.length > 0) {
+        document.getElementById(sectionId).style.display = "block";
+        document.getElementById(listId).innerHTML = items
+            .map(i => "<li>" + escapeHtml(i) + "</li>").join("");
+    }
+}
+
+function escapeHtml(s) {
+    if (!s) return "";
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// =====================================================
+// 1. FILE UPLOAD (PDF/DOCX/TXT)
+// =====================================================
+async function uploadFile() {
+    clearResults();
+    const file = document.getElementById("file-input").files[0];
+    const docType = document.getElementById("file-doctype").value;
+
+    if (!file) { showError("Fayl seçin."); return; }
+
+    setLoading(true, true);
+    startTyping("typing-file", "typing-file-msg");
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("doc_type", docType);
+
+    try {
+        const res = await fetch(API + "/upload/file", { method: "POST", body: fd });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Xəta baş verdi");
+        }
+        const data = await res.json();
+        renderResults(data.analysis);
+    } catch (e) {
+        showError(e.message);
+    } finally {
+        stopTyping("typing-file");
+        setLoading(true, false);
+    }
+}
+
+
+// =====================================================
+// 2. TEXT UPLOAD (copy-paste)
+// =====================================================
+async function uploadText() {
+    clearResults();
+    const text = document.getElementById("text-input").value.trim();
+    const docType = document.getElementById("text-doctype").value;
+
+    if (text.length < 50) {
+        showError("Mətn minimum 50 simvol olmalıdır."); return;
+    }
+
+    setLoading(true, true);
+    startTyping("typing-text", "typing-text-msg");
+
+    try {
+        const res = await fetch(API + "/upload/text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: text, doc_type: docType })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Xəta baş verdi");
+        }
+        const data = await res.json();
+        renderResults(data.analysis);
+    } catch (e) {
+        showError(e.message);
+    } finally {
+        stopTyping("typing-text");
+        setLoading(true, false);
+    }
+}
+
+
+// =====================================================
+// 3. IMAGE UPLOAD (max 6)
+// =====================================================
+async function uploadImages() {
+    clearResults();
+    const files = document.getElementById("images-input").files;
+    const docType = document.getElementById("images-doctype").value;
+
+    if (files.length === 0) { showError("Şəkil seçin."); return; }
+    if (files.length > 6) { showError("Maksimum 6 şəkil."); return; }
+
+    setLoading(true, true);
+    startTyping("typing-images", "typing-images-msg");
+
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    fd.append("doc_type", docType);
+
+    try {
+        const res = await fetch(API + "/upload/images", { method: "POST", body: fd });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Xəta baş verdi");
+        }
+        const data = await res.json();
+        renderResults(data.analysis);
+    } catch (e) {
+        showError(e.message);
+    } finally {
+        stopTyping("typing-images");
+        setLoading(true, false);
+    }
+}
+
+
+// =====================================================
+// 4. TERMS UPLOAD (STREAMING — real time!)
+// =====================================================
+async function uploadTerms() {
+    clearResults();
+
+    const text = document.getElementById("terms-input").value.trim();
+    const file = document.getElementById("terms-file").files[0];
+
+    if (!text && !file) {
+        showError("Mətn və ya fayl göndərin."); return;
+    }
+
+    const streamBox = document.getElementById("stream-output");
+    streamBox.style.display = "block";
+    streamBox.innerHTML = "";
+
+    setLoading(true, true);
+    const fd = new FormData();
+    if (file) fd.append("file", file);
+    fd.append("text", text);
+    fd.append("doc_type", "terms");  // birləşdirilmiş kateqoriya
+
+    try {
+        const res = await fetch(API + "/upload/terms", { method: "POST", body: fd });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Xəta baş verdi");
+        }
+
+        // ----- Streaming: ReadableStream oxu -----
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let analysisId = null;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop();  // sonuncu yarımçıq sətir
+
+            for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+
+                const message = line.slice(6).trim();
+                if (!message) continue;
+
+                if (message.startsWith("DONE:")) {
+                    analysisId = parseInt(message.slice(5));
+                    addStreamLine("Analiz tamamlandı", true);
+                } else {
+                    addStreamLine(message, false);
+                }
+            }
+        }
+
+        // Analiz nəticəsini gətir
+        if (analysisId) {
+            const res2 = await fetch(API + "/analysis/" + analysisId);
+            if (res2.ok) {
+                const analysis = await res2.json();
+                renderResults(analysis);
+            }
+        }
+
+    } catch (e) {
+        showError(e.message);
+    } finally {
+        setLoading(true, false);
+    }
+}
+
+function addStreamLine(text, isDone) {
+    const div = document.createElement("div");
+    div.className = "stream-line" + (isDone ? " done" : "");
+    div.textContent = text;
+    if (!isDone) {
+        const spinner = document.createElement("span");
+        spinner.className = "spinner";
+        div.appendChild(spinner);
+    }
+    document.getElementById("stream-output").appendChild(div);
+}
+</script>
+
+</body>
+</html>
