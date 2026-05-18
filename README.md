@@ -1,15 +1,33 @@
 # Contract Analyzer
 
-![Demo](Wiki/contract_analayzer1.png)
-![Demo](Wiki/contract_analayzer2.png)
-![Demo](Wiki/contract_analayzer5.png)
-![Demo](Wiki/contract_analayzer7.png)
-
-> Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 > Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 
-AI Engineering kursunun 2-ci ay layihəsi. Müqavilələri, istifadə şərtlərini və məxfilik siyasətlərini analiz edir, Azərbaycan qanunvericiliyi, GDPR və kibertəhlükəsizlik standartları ilə uyğunluğunu yoxlayır.
+AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlər göstərən tətbiqlərin istifadə şərtlərini və məxfilik siyasətlərini analiz edir, Azərbaycan qanunvericiliyi, GDPR (General Data Protection Regulation) və kibertəhlükəsizlik standartları ilə uyğunluğunu yoxlayır.
 
+---
+
+## 🎬 Demo
+
+![Contract Analyzer in action](Wiki/contract_analyzer.gif)
+
+*Müqavilə analizi real vaxtda*
+
+---
+
+## 📸 Ekran görüntüləri
+
+| Upload | Analiz nəticəsi |
+|--------|-----------------|
+| ![Upload interface](Wiki/contract_analyzer1.png) | ![Analysis results](Wiki/contract_analyzer2.png) |
+| ![Risk assessment](Wiki/contract_analyzer5.png) | ![Compliance check](Wiki/contract_analyzer7.png) |
+
+---
+
+## 🎥 Demo
+
+![demo](Wiki/contract_analyzer1.gif)
+
+*Terms and privacy policy analizi real vaxtda*
 ---
 
 ## Əsas xüsusiyyətlər
