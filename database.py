@@ -1,6 +1,6 @@
 """
 DATABASE.PY — Verilənlər bazası modelləri
-SQL, SQLAlchemy ORM
+Dərs 10-11: SQL, SQLAlchemy ORM
 """
 
 import os
@@ -13,16 +13,27 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
+# -------------------------------------------------------
+# Mühit dəyişənlərini yüklə (.env faylından)
+# -------------------------------------------------------
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./contract_analyzer.db")
 
+# -------------------------------------------------------
 # Engine və Session
+# Engine — Python ilə DB arasında körpü
+# Session — hər sorğu üçün əlaqə
+# -------------------------------------------------------
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
-# CƏDVƏL 1: Document - Yüklənən hər sənəd burada saxlanır
+
+# -------------------------------------------------------
+# CƏDVƏL 1: Document
+# Yüklənən hər sənəd burada saxlanır
+# -------------------------------------------------------
 class Document(Base):
     __tablename__ = "documents"
 
@@ -38,8 +49,10 @@ class Document(Base):
     analyses    = relationship("Analysis", back_populates="document")
 
 
-
-# CƏDVƏL 2: Analysis - Claude-un hər analiz nəticəsi burada saxlanır
+# -------------------------------------------------------
+# CƏDVƏL 2: Analysis
+# Claude-un hər analiz nəticəsi burada saxlanır
+# -------------------------------------------------------
 class Analysis(Base):
     __tablename__ = "analyses"
 
@@ -79,8 +92,11 @@ class Analysis(Base):
     document         = relationship("Document", back_populates="analyses")
 
 
-
-# CƏDVƏL 3: Law - seed_laws.py tərəfindən bir dəfə doldurulan AZ qanunları və GDPR maddələri
+# -------------------------------------------------------
+# CƏDVƏL 3: Law
+# AZ qanunları və GDPR maddələri
+# seed_laws.py tərəfindən bir dəfə doldurulur
+# -------------------------------------------------------
 class Law(Base):
     __tablename__ = "laws"
 
@@ -95,26 +111,24 @@ class Law(Base):
     updated_at     = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-
-# CƏDVƏL 4: LawCache - Eyni sorğunun təkrar Claude-a göndərilməsinin qarşısını alaraq Token sərfiyyatını azaldır
-class LawCache(Base):
-    __tablename__ = "law_cache"
-
-    id          = Column(Integer, primary_key=True, index=True)
-    query_key   = Column(String(255), unique=True, index=True)  # "AZ_LAW_468.1"
-    result      = Column(Text)                                   # Claude-un cavabı
-    hits        = Column(Integer, default=1)                     # neçə dəfə istifadə edildi
-    created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+# -------------------------------------------------------
+# QEYD: LawCache cədvəli silinib.
+# Cache məntiqi artıq Redis ilə həll olunur (tools.py).
+# -------------------------------------------------------
 
 
-
+# -------------------------------------------------------
 # DB-ni yarat (cədvəllər mövcud deyilsə)
+# -------------------------------------------------------
 def init_db():
     Base.metadata.create_all(bind=engine)
     print("✅ Cədvəllər yaradıldı.")
 
 
-# FastAPI üçün dependency injection hər request üçün session açır, bitdikdə bağlayır
+# -------------------------------------------------------
+# FastAPI üçün dependency injection
+# Hər request üçün session açır, bitdikdə bağlayır
+# -------------------------------------------------------
 def get_db():
     db = SessionLocal()
     try:

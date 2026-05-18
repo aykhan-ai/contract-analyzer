@@ -1,0 +1,27 @@
+# Redis cache üçün lokal Docker konfiqurasiyası
+#
+# İstifadə:
+#   docker compose up -d redis        # arxa planda başlat
+#   docker compose down               # dayandır
+#   docker compose logs redis         # log-ları gör
+#
+# Redis məlumatları redis_data volume-da saxlanır,
+# container silinsə də cache qalır.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: contract_analyzer_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  redis_data:

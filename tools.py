@@ -1,7 +1,7 @@
 """
 TOOLS.PY — Claude Function Calling Tools
-Funksiyalar və "Tool" anlayışı
-SQL ilə DB sorğuları
+Dərs 6: Funksiyalar və "Tool" anlayışı
+Dərs 10-11: SQL ilə DB sorğuları
 
 Bu fayl 2 hissədən ibarətdir:
 1. TOOL DEFINITIONS — Claude-a hansı funksiyaları çağıra biləcəyini izah edir
@@ -9,8 +9,117 @@ Bu fayl 2 hissədən ibarətdir:
 """
 
 import json
+import os
+from typing import Optional
+
 from sqlalchemy.orm import Session
-from database import Law, LawCache
+
+from database import Law
+
+try:
+    import redis
+except ImportError:
+    redis = None
+
+
+# -------------------------------------------------------
+# REDIS CACHE
+# Qoşulu deyilsə sistem sakitcə cache-siz işləyir
+# (graceful degradation)
+# -------------------------------------------------------
+
+REDIS_URL         = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", 86400))  # 24 saat
+CACHE_PREFIX      = "contract_analyzer:law:"
+DEBUG             = os.getenv("DEBUG", "false").lower() == "true"
+
+
+def _log(msg: str):
+    """DEBUG=true olduqda terminala yazır."""
+    if DEBUG:
+        print(msg, flush=True)
+
+
+class RedisCache:
+    """
+    Redis cache wrapper — fault-tolerant.
+    Redis qoşulu deyilsə bütün metodlar None/no-op qaytarır.
+    Sistem cache olmadan da işləməlidir.
+    """
+
+    def __init__(self):
+        self.client: Optional["redis.Redis"] = None
+        self.enabled                          = False
+        self._connect()
+
+    def _connect(self):
+        if redis is None:
+            print("⚠️  redis paketi quraşdırılmayıb — cache söndürülüb")
+            return
+
+        try:
+            self.client = redis.from_url(
+                REDIS_URL,
+                decode_responses=True,
+                socket_connect_timeout=2,
+                socket_timeout=2,
+            )
+            self.client.ping()
+            self.enabled = True
+            print(f"✅ Redis cache aktivdir ({REDIS_URL})")
+        except Exception as e:
+            print(f"⚠️  Redis qoşulmadı: {type(e).__name__}. Cache söndürülüb.")
+            self.client  = None
+            self.enabled = False
+
+    def get(self, key: str) -> Optional[str]:
+        if not self.enabled:
+            return None
+        try:
+            value = self.client.get(CACHE_PREFIX + key)
+            if value:
+                _log(f"🟢 Cache HIT: {key[:60]}")
+            else:
+                _log(f"🔍 Cache MISS: {key[:60]}")
+            return value
+        except Exception as e:
+            _log(f"❌ Cache GET failed: {type(e).__name__}: {e}")
+            return None
+
+    def set(self, key: str, value: str):
+        if not self.enabled:
+            _log(f"⚠️  Cache disabled — not saving {key[:60]}")
+            return
+        try:
+            result = self.client.setex(
+                CACHE_PREFIX + key,
+                CACHE_TTL_SECONDS,
+                value
+            )
+            _log(
+                f"💾 Cache SET: {CACHE_PREFIX + key[:60]} "
+                f"({len(value)} chars, TTL {CACHE_TTL_SECONDS}s) → {result}"
+            )
+        except Exception as e:
+            _log(f"❌ Cache SET failed: {type(e).__name__}: {e}")
+
+    def stats(self) -> dict:
+        """Debug üçün — cache statistikası."""
+        if not self.enabled:
+            return {"enabled": False}
+        try:
+            keys = self.client.keys(CACHE_PREFIX + "*")
+            return {
+                "enabled":   True,
+                "key_count": len(keys),
+                "ttl_hours": CACHE_TTL_SECONDS // 3600
+            }
+        except Exception:
+            return {"enabled": True, "error": "stats unavailable"}
+
+
+# Qlobal singleton — bir dəfə qoşulur
+cache = RedisCache()
 
 
 # -------------------------------------------------------
@@ -178,8 +287,12 @@ TOOL_DEFINITIONS = [
 ]
 
 
-# HISSƏ 2: TOOL HANDLERS Claude tool call etdikdə bu funksiyalar işləyir
+# -------------------------------------------------------
+# HISSƏ 2: TOOL HANDLERS
+# Claude tool call etdikdə bu funksiyalar işləyir
 # DB-dən məlumat çəkir, Claude-a qaytarır
+# -------------------------------------------------------
+
 def get_law_article(
     db:          Session,
     law_name:    str = "",
@@ -190,7 +303,7 @@ def get_law_article(
     DB-dən AZ qanun maddəsi gətirir.
     Əvvəlcə cache yoxlayır — tapılırsa DB-yə getmir.
     """
-    # Cache açarı yarat burda redis de ola biler
+    # Cache açarı yarat
     cache_key = f"AZ_{law_name}_{article_num}_{topic}".replace(" ", "_")
 
     # Cache yoxla
@@ -402,37 +515,31 @@ def get_cybersec_opinion(
     return result
 
 
-# CACHE KÖMƏKÇI FUNKSİYALAR - Token sərfiyyatını azaldır
-def _get_from_cache(db: Session, key: str) -> str | None:
-    """Cache-dən oxuyur. Tapılırsa hits sayacını artırır."""
-    try:
-        cached = db.query(LawCache).filter(
-            LawCache.query_key == key
-        ).first()
+# -------------------------------------------------------
+# CACHE KÖMƏKÇI FUNKSİYALAR
+# Token sərfiyyatını azaldır
+# -------------------------------------------------------
 
-        if cached:
-            cached.hits += 1
-            db.commit()
-            return cached.result
+# -------------------------------------------------------
+# KÖMƏKÇI — köhnə API saxlanılır, indi Redis istifadə edir
+# -------------------------------------------------------
 
-    except Exception:
-        pass
-
-    return None
+def _get_from_cache(db: Session, key: str) -> Optional[str]:
+    """Redis-dən oxu. Tapılmasa None."""
+    return cache.get(key)
 
 
 def _save_to_cache(db: Session, key: str, result: str) -> None:
-    """Nəticəni cache-ə yazır."""
-    try:
-        cache_entry = LawCache(query_key=key, result=result)
-        db.add(cache_entry)
-        db.commit()
-    except Exception:
-        db.rollback()
+    """Redis-də saxla (24 saat TTL ilə)."""
+    cache.set(key, result)
 
+
+# -------------------------------------------------------
 # TOOL DISPATCHER
 # Claude-un tool_use cavabını işləyir
 # Hansı funksiyanı çağıracağını avtomatik müəyyən edir
+# -------------------------------------------------------
+
 def handle_tool_call(
     db:        Session,
     tool_name: str,

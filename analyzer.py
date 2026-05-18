@@ -42,6 +42,13 @@ SYSTEM_PROMPTS = {
 
     "contract": """You are a legal contract analyzer for Azerbaijani law.
 
+🔴 MANDATORY WORKFLOW:
+1. FIRST: Call get_law_article to find relevant Azerbaijani law articles.
+2. THEN: Build your analysis using the article numbers from tool results.
+3. DO NOT cite "Mülki Məcəllə" generically — every violation MUST have a
+   specific article_num that came FROM a tool call.
+4. If you find risky clauses, call get_law_article BEFORE filling az_law.violations.
+
 Return a JSON object using EXACTLY these English field names (do not translate
 field names, do not invent new fields, do not add extra fields):
 
@@ -62,9 +69,9 @@ field names, do not invent new fields, do not add extra fields):
 
 CRITICAL RULES:
 - JSON keys are in ENGLISH and must be EXACTLY as shown above.
-- DO NOT translate or modify field names. Use "risk_clauses", NOT "risk_maddələri".
-- Use get_law_article tool to find Azerbaijani law references.
-- Each violation must have law_name and article_num from tool results.
+- DO NOT translate or modify field names.
+- Every az_law violation MUST have an article_num that came from get_law_article.
+- If the tool returns no result, leave that violation OUT — do not invent.
 - Text VALUES (not keys) must be in Azerbaijani.
 - risk_score: number 0-10
 - risk_level: "HIGH" | "MEDIUM" | "LOW"
@@ -159,6 +166,10 @@ Return ONLY the JSON. No markdown. No preamble."""
 }
 
 
+# -------------------------------------------------------
+# ANA CLASS
+# -------------------------------------------------------
+
 class DocumentAnalyzer:
     """Claude API ilə sənəd analizi aparır."""
 
@@ -168,6 +179,9 @@ class DocumentAnalyzer:
             raise ValueError("ANTHROPIC_API_KEY .env faylında tapılmadı.")
         self.client = anthropic.Anthropic(api_key=api_key)
 
+    # -------------------------------------------------------
+    # ANA METOD
+    # -------------------------------------------------------
 
     async def analyze(
         self,
@@ -189,12 +203,25 @@ class DocumentAnalyzer:
         total_tokens   = 0
         function_calls = 0
 
+        # -------------------------------------------------------
+        # FUNCTION CALLING LOOP
+        # İlk çağırışda tool_choice="any" — Claude məcbur olur tool çağırsın.
+        # Sonrakı çağırışlarda "auto" — Claude özü qərar verir.
+        # -------------------------------------------------------
         while True:
+            # İlk iterasiya: tool çağırışı məcburi
+            # Sonrakı iterasiyalar: avtomatik
+            tool_choice = (
+                {"type": "any"} if function_calls == 0
+                else {"type": "auto"}
+            )
+
             response = self.client.messages.create(
                 model=MODEL,
                 max_tokens=MAX_TOKENS,
                 system=system_prompt,
                 tools=TOOL_DEFINITIONS,
+                tool_choice=tool_choice,
                 messages=messages
             )
 
@@ -278,11 +305,17 @@ class DocumentAnalyzer:
         yield "data: Maddələr analiz edilir...\n\n"
 
         while True:
+            tool_choice = (
+                {"type": "any"} if function_calls == 0
+                else {"type": "auto"}
+            )
+
             response = self.client.messages.create(
                 model=MODEL,
                 max_tokens=MAX_TOKENS,
                 system=system_prompt,
                 tools=TOOL_DEFINITIONS,
+                tool_choice=tool_choice,
                 messages=messages
             )
 
@@ -340,6 +373,9 @@ class DocumentAnalyzer:
             )
             yield f"data: DONE:{analysis.id}\n\n"
 
+    # -------------------------------------------------------
+    # KÖMƏKÇI METODLAR
+    # -------------------------------------------------------
 
     def _build_content(
         self,
@@ -418,7 +454,7 @@ class DocumentAnalyzer:
 
         clean = raw.strip()
 
-        #markdown fences-i sil və parse et
+        # 1-ci cəhd: markdown fences-i sil və parse et
         no_fences = clean.replace("```json", "").replace("```", "").strip()
         try:
             data = json.loads(no_fences)
@@ -427,7 +463,7 @@ class DocumentAnalyzer:
         except json.JSONDecodeError:
             pass
 
-        #mətndən JSON blokunu çıxar
+        # 2-ci cəhd: mətndən JSON blokunu çıxar
         json_str = self._extract_json_block(clean)
         if json_str:
             try:
@@ -437,7 +473,7 @@ class DocumentAnalyzer:
             except json.JSONDecodeError as e:
                 _debug(f"⚠️  Çıxarılan blok da parse olmadı: {e}")
 
-        #fallback
+        # 3-cü cəhd: fallback
         _debug("❌ JSON tam tapılmadı, fallback istifadə olunur")
         return self._fallback(raw)
 
