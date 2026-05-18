@@ -1,5 +1,11 @@
 # Contract Analyzer
 
+![Demo](Wiki/contract_analayzer1.png)
+![Demo](Wiki/contract_analayzer2.png)
+![Demo](Wiki/contract_analayzer5.png)
+![Demo](Wiki/contract_analayzer7.png)
+
+> Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 > Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 
 AI Engineering kursunun 2-ci ay layihəsi. Müqavilələri, istifadə şərtlərini və məxfilik siyasətlərini analiz edir, Azərbaycan qanunvericiliyi, GDPR və kibertəhlükəsizlik standartları ilə uyğunluğunu yoxlayır.
@@ -278,4 +284,4 @@ Hər analiz aşağıdakı strukturu qaytarır:
 
 ## Lisenziya
 
-Tədris layihəsi — sərbəst istifadə.
+MIT License — bax [LICENSE](LICENSE)
