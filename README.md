@@ -278,4 +278,4 @@ Hər analiz aşağıdakı strukturu qaytarır:
 
 ## Lisenziya
 
-Tədris layihəsi — sərbəst istifadə.
+MIT License — bax [LICENSE](LICENSE)
