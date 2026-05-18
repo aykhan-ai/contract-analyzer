@@ -1,9 +1,9 @@
 # Contract Analyzer
 
-![Demo](wiki/contract_analayzer1.png)
-![Demo](wiki/contract_analayzer2.png)
-![Demo](wiki/contract_analayzer5.png)
-![Demo](wiki/contract_analayzer7.png)
+![Demo](Wiki/contract_analayzer1.png)
+![Demo](Wiki/contract_analayzer2.png)
+![Demo](Wiki/contract_analayzer5.png)
+![Demo](Wiki/contract_analayzer7.png)
 
 > Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 > Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
