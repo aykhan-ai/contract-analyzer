@@ -1,7 +1,7 @@
 # Contract Analyzer
 
-![Demo](docs/contract_analayzer1.png)
-![Demo](docs/contract_analayzer2.png)
+docs/contract_analayzer1.png
+docs/contract_analayzer2.png
 ![Demo](docs/contract_analayzer5.png)
 ![Demo](docs/contract_analayzer7.png)
 
