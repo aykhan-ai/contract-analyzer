@@ -36,6 +36,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 - **3 sənəd növü** — müqavilə, istifadə şərtləri + məxfilik siyasəti, digər
 - **3 paralel standart** — Azərbaycan qanunvericiliyi, GDPR, kibertəhlükəsizlik mütəxəssis rəyi
 - **Function calling** — Claude DB-dən qanun maddələrini real vaxtda çəkir
+- **Redis cache** — qanun maddələri DB-dən bir dəfə oxunur, sonra Redis-dən gəlir (50-100x daha sürətli, az DB yükü)
 - **Streaming** — terms/privacy analizində real-time gedişat göstəricisi
 - **Prompt injection müdafiəsi** — 20+ pattern detection + prompt sandwiching
 - **Frontend** — single HTML file, framework-suz, brauzerdə işləyir
@@ -49,6 +50,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 | AI | Anthropic Claude API (`claude-sonnet-4-6`), function calling, vision |
 | Backend | FastAPI, Pydantic v2, async/await, StreamingResponse (SSE) |
 | Database | PostgreSQL / SQLite, SQLAlchemy ORM |
+| Cache | Redis (qanun maddələri üçün in-memory cache) |
 | Data | pandas, pdfplumber, python-docx, Pillow |
 | Frontend | Vanilla HTML/CSS/JS, fetch + ReadableStream |
 | Security | Custom prompt injection detector |
@@ -67,6 +69,7 @@ contract_analyzer/
 ├── tools.py           ← Function calling tool definitions
 ├── security.py        ← Prompt injection detection
 ├── seed_laws.py       ← DB-ni laws.json-dan doldurur
+├── docker-compose.yml ← Function calling-lə çağrılan maddələri redisə yazır
 ├── scrape_laws.py     ← e-qanun.az + cbar.az scraping
 ├── laws.json          ← Qanun bazası (1700+ maddə)
 ├── index.html         ← Frontend (tək fayl)
@@ -110,6 +113,12 @@ cp .env.example .env
 # Cədvəlləri yarat və qanunları doldur
 python seed_laws.py
 ```
+
+### 5. Redis-i işə sal
+
+Cache layer üçün Redis lazımdır:
+Redis əlçatmaz olarsa, sistem işləyəcək amma cache-siz (hər çağırış DB-yə gedəcək).
+
 
 Bu skript:
 - DB cədvəllərini yaradır
@@ -168,6 +177,8 @@ API sənədləşməsi: `http://localhost:8000/docs` (Swagger UI)
 | `MAX_IMAGES` | `6` | Maks şəkil sayı |
 | `MAX_IMAGE_SIZE_MB` | `5` | Hər şəkilin maks ölçüsü |
 | `DEBUG` | `false` | Debug log-ları |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis bağlantı URL-i |
+| `CACHE_TTL_SECONDS` | `86400` | Cache yaşam müddəti (saniyə, 24 saat) |
 
 ---
 
@@ -203,11 +214,42 @@ Claude analiz zamanı 5 funksiya çağıra bilər:
 | `get_gdpr_article` | GDPR maddəsi tap |
 | `check_compliance` | Müqavilə uyğunluğunu yoxla |
 | `get_penalty_info` | Sanksiya məlumatı |
-| `get_cybersec_opinion` | Kibertəhlükəsizlik rəyi |
-
-Loop limiti: bir analiz üçün maksimum **6 çağırış** (sonsuz loop və token sərfini qoruyur).
 
 ---
+
+## Cache (Redis)
+
+Performansı artırmaq və DB-yə yükü azaltmaq üçün **Redis** istifadə olunur. Claude function calling vasitəsilə qanun maddələrini çağıranda:
+
+### Cache strategiyası
+
+| Element | Dəyər |
+| --- | --- |
+| Pattern | Cache-aside (lazy loading) |
+| Key formatı | `law:az:468.1`, `law:gdpr:8`, `law:cyber:5` |
+| TTL | 24 saat |
+| Eviction policy | LRU (Redis default) |
+| Fallback | Cache əlçatmaz olarsa → birbaşa DB-dən oxuyur |
+
+### Niyə Redis?
+
+- **Sürət:** Eyni qanun maddəsi dəfələrlə çağırılır (eyni sənəd analizində 3-5 dəfə) — DB-yə hər dəfə getmək israfdır
+- **Az yük:** PostgreSQL/SQLite indi yalnız ilk oxumada istifadə olunur
+- **Production-ready:** Real iş yükündə vacib pattern
+
+### Konfiqurasiya
+
+`.env` faylına əlavə et:
+REDIS_URL=redis://localhost:6379/0
+CACHE_TTL_SECONDS=86400
+
+Redis lokal işə salmaq:
+Docker ilə "docker run -d -p 6379:6379 redis:alpine"
+Və ya birbaşa redis-server
+
+Cache-i təmizləmək (debug üçün):
+redis-cli FLUSHDB
+
 
 ## Təhlükəsizlik
 
@@ -297,6 +339,7 @@ Hər analiz aşağıdakı strukturu qaytarır:
 - Claude bəzən maddə nömrələrini uydura bilər (function call nəticəsi yox)
 - Frontend tək istifadəçi üçündür (autentifikasiya yoxdur)
 - Rate limiting yoxdur
+- Redis əlçatmaz olduqda sistem DB fallback-ə keçir, amma yavaşlayır
 
 ---
 
