@@ -6,7 +6,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 
 ---
 
-## 🎬 Demo
+## 🎬 Demo-1
 
 ![Contract Analyzer in action](Wiki/contract_analyzer.gif)
 
@@ -23,7 +23,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 
 ---
 
-## 🎥 Demo
+## 🎥 Demo-2
 
 ![demo](Wiki/contract_analyzer1.gif)
 
@@ -125,7 +125,7 @@ Bu skript:
 - `laws.json`-dan 1700+ qanun maddəsini yükləyir
 - Statistika göstərir
 
-### 5. Serveri işlət
+### 6. Serveri işlət
 
 ```bash
 uvicorn main:app --reload
@@ -133,7 +133,7 @@ uvicorn main:app --reload
 
 Server `http://localhost:8000`-də işləyir.
 
-### 6. Frontend-i aç
+### 7. Frontend-i aç
 
 `index.html` faylını brauzerdə aç. Server avtomatik aşkarlanır.
 
