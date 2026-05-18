@@ -1,5 +1,8 @@
 # Contract Analyzer
 
+![Demo](docs/demo.gif)
+
+> Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 > Hüquqi sənəd və müqavilə analiz sistemi — Claude AI əsaslı.
 
 AI Engineering kursunun 2-ci ay layihəsi. Müqavilələri, istifadə şərtlərini və məxfilik siyasətlərini analiz edir, Azərbaycan qanunvericiliyi, GDPR və kibertəhlükəsizlik standartları ilə uyğunluğunu yoxlayır.
