@@ -33,7 +33,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 
 ## Əsas xüsusiyyətlər
 
-- **4 upload üsulu** — PDF, DOCX, TXT, copy-paste mətn, fotoşəkil (maks 6 səhifə)
+- **4 upload üsulu** — PDF, DOCX, TXT, copy-paste mətn, fotoşəkil
 - **3 sənəd növü** — müqavilə, istifadə şərtləri + məxfilik siyasəti, digər
 - **3 paralel standart** — Azərbaycan qanunvericiliyi, GDPR, kibertəhlükəsizlik mütəxəssis rəyi
 - **Function calling** — Claude DB-dən qanun maddələrini real vaxtda çəkir
@@ -115,9 +115,9 @@ cp .env.example .env
 python scrape_laws.py
 ```
 Bu skript:
--Az Qanunlarını real vaxtda internetdən çəkir
--GDPR və Kibertəhlükəsizlik məsləhətlərini özündə saxlayır
--qeyd olunan qanunları və məsləhətləri `laws.json`-a ixrac edir
+- Az Qanunlarını real vaxtda internetdən çəkir
+- GDPR və Kibertəhlükəsizlik məsləhətlərini özündə saxlayır
+- qeyd olunan qanunları və məsləhətləri `laws.json`-a ixrac edir
 
 ### 5. Database-ni qur
 
@@ -366,7 +366,7 @@ Hər analiz aşağıdakı strukturu qaytarır:
 | Sənəd | Endpoint | Gözlənilən nəticə |
 |---|---|---|
 | Azərbaycan iş müqaviləsi (PDF) | `/upload/file` | AZ qanun pozuntuları, risk maddələri |
-| WhatsApp Privacy Policy (copy-paste) | `/upload/terms` | GDPR + cyber_sec uyğunluğu, streaming |
+| Privacy Policy (copy-paste) | `/upload/terms` | GDPR + cyber_sec uyğunluğu, streaming |
 | Fiziki müqavilə (6 şəkil) | `/upload/images` | OCR + risk analizi |
 | Prompt injection cəhdi | İstənilən | `400 — Təhlükəsizlik` xətası |
 
