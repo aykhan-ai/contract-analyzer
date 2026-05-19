@@ -28,6 +28,7 @@ AI Engineering kursundaki 2-ci ay layihəm. Müqavilələri, elektron xidmətlə
 ![demo](Wiki/contract_analyzer1.gif)
 
 *Terms and privacy policy analizi real vaxtda*
+
 ---
 
 ## Əsas xüsusiyyətlər
@@ -65,11 +66,11 @@ contract_analyzer/
 ├── database.py        ← SQLAlchemy models
 ├── schemas.py         ← Pydantic models
 ├── parser.py          ← Fayl oxuma (PDF/DOCX/TXT/şəkil)
-├── analyzer.py        ← Claude API + function calling loop
+├── analyzer.py        ← Claude API + function calling loop + Redis cache
 ├── tools.py           ← Function calling tool definitions
 ├── security.py        ← Prompt injection detection
 ├── seed_laws.py       ← DB-ni laws.json-dan doldurur
-├── docker-compose.yml ← Function calling-lə çağrılan maddələri redisə yazır
+├── docker-compose.yml ← Docker container konfiqurasiyası (Redis)
 ├── scrape_laws.py     ← e-qanun.az + cbar.az scraping
 ├── laws.json          ← Qanun bazası (1700+ maddə)
 ├── index.html         ← Frontend (tək fayl)
@@ -85,8 +86,8 @@ contract_analyzer/
 ### 1. Repository klonla və mühit yarat
 
 ```bash
-git clone <repo-url>
-cd contract_analyzer
+git clone https://github.com/aykhan-ai/contract-analyzer.git
+cd contract-analyzer
 
 python -m venv venv
 source venv/bin/activate           # Linux/Mac
@@ -107,25 +108,48 @@ cp .env.example .env
 
 `.env` faylını aç və `ANTHROPIC_API_KEY` daxil et. PostgreSQL istifadə edirsənsə, `DATABASE_URL`-i də yenilə.
 
-### 4. Database-ni qur
+### 4. Qanunları real vaxtda scrape et
+
+```bash
+# e-qanun.az + cbar.az scraping edərək qanunları götür
+python scrape_laws.py
+```
+Bu skript:
+-Az Qanunlarını real vaxtda internetdən çəkir
+-GDPR və Kibertəhlükəsizlik məsləhətlərini özündə saxlayır
+-qeyd olunan qanunları və məsləhətləri `laws.json`-a ixrac edir
+
+### 5. Database-ni qur
 
 ```bash
 # Cədvəlləri yarat və qanunları doldur
 python seed_laws.py
 ```
 
-### 5. Redis-i işə sal
-
-Cache layer üçün Redis lazımdır:
-Redis əlçatmaz olarsa, sistem işləyəcək amma cache-siz (hər çağırış DB-yə gedəcək).
-
-
 Bu skript:
 - DB cədvəllərini yaradır
 - `laws.json`-dan 1700+ qanun maddəsini yükləyir
 - Statistika göstərir
 
-### 6. Serveri işlət
+### 6. Redis-i işə sal (opsional, amma tövsiyə olunan)
+
+Cache layer üçün Redis lazımdır. Redis əlçatmaz olsa, sistem işləyəcək, amma hər function call DB-yə gedəcək (yavaşlama).
+
+**Docker ilə (ən asan üsul):**
+
+```bash
+docker run -d -p 6379:6379 --name contract-redis redis:alpine
+```
+
+**Yoxla — Redis işləyir:**
+
+```bash
+redis-cli ping     # Cavab: PONG
+```
+
+**Windows-da Docker yoxdursa:** [Memurai](https://www.memurai.com) (Redis-in Windows versiyası) və ya WSL2 + Ubuntu istifadə edə bilərsən.
+
+### 7. Serveri işlət
 
 ```bash
 uvicorn main:app --reload
@@ -133,7 +157,7 @@ uvicorn main:app --reload
 
 Server `http://localhost:8000`-də işləyir.
 
-### 7. Frontend-i aç
+### 8. Frontend-i aç
 
 `index.html` faylını brauzerdə aç. Server avtomatik aşkarlanır.
 
@@ -197,6 +221,7 @@ Mənbələr:
 - `frameworks.e-qanun.az` — Əmək Məcəlləsi, Fərdi Məlumatlar Qanunu
 
 Yenidən scrape etmək üçün:
+
 ```bash
 python scrape_laws.py    # laws.json yenidən yaradılır
 python seed_laws.py      # DB yenilənir
@@ -214,12 +239,22 @@ Claude analiz zamanı 5 funksiya çağıra bilər:
 | `get_gdpr_article` | GDPR maddəsi tap |
 | `check_compliance` | Müqavilə uyğunluğunu yoxla |
 | `get_penalty_info` | Sanksiya məlumatı |
+| `get_cybersec_opinion` | Kibertəhlükəsizlik məlumatı |
+
+Loop limiti: bir analiz üçün maksimum **6 çağırış** (sonsuz loop və token sərfini qoruyur).
 
 ---
 
 ## Cache (Redis)
 
-Performansı artırmaq və DB-yə yükü azaltmaq üçün **Redis** istifadə olunur. Claude function calling vasitəsilə qanun maddələrini çağıranda:
+Performansı artırmaq və DB-yə yükü azaltmaq üçün **Redis** istifadə olunur. Cache məntiqi `analyzer.py` faylında, function calling loop-un içində implementasiya olunub.
+
+Claude function calling vasitəsilə qanun maddələrini çağıranda:
+
+```
+1-ci çağırış:  Claude → cache miss → PostgreSQL → cache-ə yaz → cavab
+2-ci çağırış:  Claude → cache hit  → Redis → birbaşa cavab (DB-yə getmir)
+```
 
 ### Cache strategiyası
 
@@ -240,16 +275,21 @@ Performansı artırmaq və DB-yə yükü azaltmaq üçün **Redis** istifadə ol
 ### Konfiqurasiya
 
 `.env` faylına əlavə et:
+
+```bash
 REDIS_URL=redis://localhost:6379/0
 CACHE_TTL_SECONDS=86400
+```
 
-Redis lokal işə salmaq:
-Docker ilə "docker run -d -p 6379:6379 redis:alpine"
-Və ya birbaşa redis-server
+Redis-i lokal işə salmaq üçün — yuxarıdakı **Qurulum → 5. Redis-i işə sal** bölməsinə bax.
 
 Cache-i təmizləmək (debug üçün):
-redis-cli FLUSHDB
 
+```bash
+redis-cli FLUSHDB
+```
+
+---
 
 ## Təhlükəsizlik
 
@@ -336,7 +376,6 @@ Hər analiz aşağıdakı strukturu qaytarır:
 
 - Şəkillərin OCR keyfiyyəti şəkil keyfiyyətindən asılıdır
 - e-qanun.az HTML strukturu dəyişdikdə scraper yenilənməlidir
-- Claude bəzən maddə nömrələrini uydura bilər (function call nəticəsi yox)
 - Frontend tək istifadəçi üçündür (autentifikasiya yoxdur)
 - Rate limiting yoxdur
 - Redis əlçatmaz olduqda sistem DB fallback-ə keçir, amma yavaşlayır
